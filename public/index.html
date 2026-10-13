@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="port-desk-token" content="__PORT_DESK_TOKEN__" />
+    <title>Port desk</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --mist: #d5e3e8;
+        --sheet: #f4f8f9;
+        --ink: #1a2c33;
+        --quiet: #5d727a;
+        --line: #c5d6dc;
+        --teal: #0c5c66;
+        --clay: #8d3328;
+        --clay-line: #e3b7b0;
+        --warn: #f6eee6;
+        --warn-ink: #8a4e12;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--mist);
+        color: var(--ink);
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        font-size: 1.05rem;
+        line-height: 1.45;
+      }
+
+      .desk {
+        width: min(920px, calc(100% - 2.5rem));
+        margin: 2.5rem 0 4rem 6vw;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "Iowan Old Style", Palatino, Georgia, serif;
+        font-size: clamp(2.6rem, 5vw, 4.2rem);
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 0.95;
+      }
+
+      .intro {
+        max-width: 38rem;
+        margin: 0.8rem 0 0;
+        color: var(--quiet);
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin: 1.6rem 0 0.4rem;
+      }
+
+      input[type="search"] {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        padding: 0.55rem 0;
+      }
+
+      button, input { border-radius: 2px; }
+
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:focus-visible, input:focus-visible {
+        outline: 2px solid var(--teal);
+        outline-offset: 3px;
+      }
+
+      .refresh, .ghost, .stop, .force {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        padding: 0.45rem 0.8rem;
+      }
+
+      .refresh:hover, .ghost:hover { border-color: var(--ink); }
+
+      .counts {
+        margin: 0.2rem 0 0;
+        color: var(--quiet);
+      }
+
+      #status {
+        min-height: 1.4rem;
+        margin: 0.8rem 0;
+      }
+
+      #status.error { color: var(--clay); }
+
+      section { margin-top: 1.4rem; }
+
+      h2 {
+        margin: 0 0 0.4rem;
+        font-size: 1.15rem;
+        font-weight: 600;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 6.5rem 1fr auto;
+        gap: 0.4rem 1rem;
+        align-items: start;
+        padding: 0.95rem 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .row.protected .title { color: var(--quiet); }
+
+      .ports {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem 0.7rem;
+        margin: 0;
+      }
+
+      .ports span {
+        font-family: "Iowan Old Style", Palatino, Georgia, serif;
+        font-size: 2.15rem;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        color: var(--teal);
+      }
+
+      .row.protected .ports span { color: var(--quiet); }
+
+      .title {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.8rem;
+        margin: 0.2rem 0 0;
+        color: var(--quiet);
+      }
+
+      .path {
+        margin: 0.15rem 0 0;
+        color: var(--quiet);
+        word-break: break-all;
+      }
+
+      .reason, .shared {
+        margin: 0.35rem 0 0;
+        color: var(--warn-ink);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        justify-content: flex-end;
+      }
+
+      .stop {
+        color: var(--clay);
+        border-color: var(--clay-line);
+      }
+
+      .stop:hover, .force:hover {
+        background: var(--clay);
+        border-color: var(--clay);
+        color: white;
+      }
+
+      /* Rows with many ports wrap their buttons instead of squeezing the description. */
+      .row > .actions { max-width: 15rem; }
+
+      .open {
+        display: inline-block;
+        border: 1px solid var(--teal);
+        color: var(--teal);
+        padding: 0.45rem 0.8rem;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .open:hover {
+        background: var(--teal);
+        color: white;
+      }
+
+      .open:focus-visible {
+        outline: 2px solid var(--teal);
+        outline-offset: 3px;
+      }
+
+      .confirm {
+        grid-column: 2 / -1;
+        background: var(--warn);
+        padding: 0.75rem 0.8rem;
+      }
+
+      .confirm p { margin: 0 0 0.6rem; }
+
+      .empty {
+        margin: 1rem 0;
+        color: var(--quiet);
+      }
+
+      @media (max-width: 680px) {
+        .desk { margin-left: 1.25rem; }
+        .row { grid-template-columns: 1fr auto; }
+        .ports { grid-column: 1 / -1; }
+        .confirm { grid-column: 1 / -1; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="desk">
+      <h1>Port desk</h1>
+      <p class="intro">Listening ports on this Mac. Stop one of your project servers when another localhost wants the same port.</p>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Filter by port, project, or command" aria-label="Filter ports" />
+        <button class="refresh" id="refresh" type="button">Refresh</button>
+      </div>
+      <p class="counts" id="counts"></p>
+      <p id="status" aria-live="polite"></p>
+      <div id="list"></div>
+    </main>
+    <script>
+      const search = document.querySelector("#search");
+      const list = document.querySelector("#list");
+      const status = document.querySelector("#status");
+      const counts = document.querySelector("#counts");
+      const token = document.querySelector('meta[name="port-desk-token"]').content;
+      let snapshot = null;
+      let confirmKey = null;
+      let busy = false;
+      let active = true;
+
+      function h(tag, props, ...children) {
+        const node = document.createElement(tag);
+        for (const [key, value] of Object.entries(props || {})) {
+          if (key === "class") node.className = value;
+          else if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2).toLowerCase(), value);
+          else if (value != null) node.setAttribute(key, String(value));
+        }
+        for (const child of children.flat()) {
+          if (child == null || child === false) continue;
+          node.append(child.nodeType ? child : document.createTextNode(String(child)));
+        }
+        return node;
+      }
+
+      function matches(listener, query) {
+        if (!query) return true;
+        const haystack = [listener.ports.join(" "), listener.where, listener.title, listener.command, listener.commandLine, listener.path, listener.pids.join(" ")]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      }
+
+      function setStatus(message, isError) {
+        status.textContent = message || "";
+        status.className = isError ? "error" : "";
+      }
+
+      function processPhrase(listener) {
+        return listener.pids.length === 1 ? `pid ${listener.pids[0]}` : `${listener.pids.length} processes`;
+      }
+
+      function portLabel(ports) {
+        if (ports.length === 1) return `port ${ports[0]}`;
+        if (ports.length === 2) return `ports ${ports[0]} and ${ports[1]}`;
+        return `ports ${ports.slice(0, -1).join(", ")}, and ${ports[ports.length - 1]}`;
+      }
+
+      function render() {
+        const query = search.value.trim().toLowerCase();
+        const listeners = (snapshot?.listeners || []).filter((listener) => matches(listener, query));
+        const stoppable = listeners.filter((listener) => listener.canStop);
+        const parked = listeners.filter((listener) => !listener.canStop);
+        const all = snapshot?.listeners || [];
+        const allStoppable = all.filter((listener) => listener.canStop).length;
+        counts.textContent = all.length
+          ? `${allStoppable} servers you can stop, ${all.length - allStoppable} left alone`
+          : "";
+
+        list.replaceChildren();
+        if (!snapshot) return;
+        if (!listeners.length) {
+          list.append(h("p", { class: "empty" }, query ? "Nothing matched that filter." : "No TCP servers are listening."));
+          return;
+        }
+        if (stoppable.length) list.append(section("You can stop", stoppable));
+        if (parked.length) list.append(section("Leave running", parked));
+      }
+
+      function section(title, listeners) {
+        return h("section", null, h("h2", null, title), ...listeners.map(renderListener));
+      }
+
+      // The menu bar app hands link clicks to the default browser, so this works there and in a plain tab.
+      function openLink(port, numbered) {
+        return h(
+          "a",
+          {
+            class: "open",
+            href: `http://localhost:${port}`,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            "aria-label": `Open port ${port} in your browser`,
+          },
+          numbered ? `Open ${port}` : "Open",
+        );
+      }
+
+      function renderListener(listener) {
+        const key = listener.pids.join(",");
+        const facts = [listener.title === listener.command ? null : listener.command, processPhrase(listener), listener.where].filter(Boolean);
+        const row = h(
+          "article",
+          { class: listener.canStop ? "row" : "row protected" },
+          h("p", { class: "ports" }, ...listener.ports.map((port) => h("span", null, String(port)))),
+          h(
+            "div",
+            null,
+            h("h3", { class: "title" }, listener.title),
+            h("p", { class: "facts" }, ...facts.map((fact) => h("span", null, fact))),
+            listener.path ? h("p", { class: "path" }, listener.path) : null,
+            listener.blockedReason ? h("p", { class: "reason" }, listener.blockedReason) : null,
+            listener.shared ? h("p", { class: "shared" }, "Another program is also bound to one of these ports.") : null,
+          ),
+          h(
+            "div",
+            { class: "actions" },
+            listener.ports.map((port) => openLink(port, listener.ports.length > 1)),
+            listener.canStop ? h("button", { class: "stop", type: "button", onclick: () => openConfirm(key) }, "Stop") : null,
+          ),
+        );
+
+        if (confirmKey === key) {
+          const name = listener.pids.length > 1 ? `${listener.pids.length} ${listener.title} processes` : listener.title;
+          const extra = listener.ports.length > 1 ? " Every port in this row closes with it." : "";
+          row.append(
+            h(
+              "div",
+              { class: "confirm" },
+              h("p", null, `Stop ${name} on ${portLabel(listener.ports)}? Open work in that server can end.${extra}`),
+              h("div", { class: "actions" },
+                h("button", { class: "stop", type: "button", onclick: () => sendStop(listener, "SIGTERM") }, "Stop now"),
+                h("button", { class: "force", type: "button", onclick: () => sendStop(listener, "SIGKILL") }, "Force stop"),
+                h("button", { class: "ghost", type: "button", onclick: () => openConfirm(null) }, "Cancel"),
+              ),
+            ),
+          );
+        }
+        return row;
+      }
+
+      function openConfirm(key) {
+        confirmKey = key;
+        render();
+      }
+
+      async function load() {
+        try {
+          const response = await fetch("/api/listeners", { headers: { "X-Port-Desk-Token": token } });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || "Could not list ports.");
+          snapshot = body;
+          render();
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      }
+
+      async function sendStop(listener, signal) {
+        if (busy) return;
+        busy = true;
+        setStatus(signal === "SIGKILL" ? "Forcing the process to exit…" : "Asking the process to exit…");
+        try {
+          const response = await fetch("/api/stop", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Port-Desk-Token": token },
+            body: JSON.stringify({ pids: listener.pids, signal }),
+          });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || "Could not stop that process.");
+          if (body.failed?.length) throw new Error(body.failed.map((item) => item.error).join(" "));
+          confirmKey = null;
+          setStatus(`Stopped ${portLabel(listener.ports)}.`);
+          await load();
+        } catch (error) {
+          setStatus(error.message, true);
+        } finally {
+          busy = false;
+        }
+      }
+
+      search.addEventListener("input", render);
+      document.querySelector("#refresh").addEventListener("click", () => {
+        setStatus("Checking listening ports…");
+        load().then(() => {
+          if (!status.className) setStatus("");
+        });
+      });
+      // The menu bar app calls this when the popover opens or closes, so lsof only runs while it is visible.
+      window.portDeskSetActive = (value) => {
+        active = Boolean(value);
+        if (active) {
+          load();
+        } else {
+          confirmKey = null;
+          render();
+        }
+      };
+      load();
+      setInterval(() => {
+        if (active && !confirmKey && !busy && document.activeElement !== search) load();
+      }, 4000);
+    </script>
+  </body>
+</html>
